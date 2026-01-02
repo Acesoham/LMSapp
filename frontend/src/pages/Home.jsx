@@ -170,25 +170,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl lg:text-5xl font-display font-bold text-white mb-6">
-            Ready to Start Learning?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Join thousands of students already learning on EduFlow
-          </p>
-          {!isAuthenticated && (
-            <Link
-              to="/register"
-              className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
-            >
-              Sign Up Now - It's Free
-            </Link>
-          )}
-        </div>
-      </section>
+      
     </div>
   );
 };

@@ -229,7 +229,7 @@ const CourseDetail = () => {
                 <p className="text-slate-600">One-time payment</p>
               </div>
 
-              {isEnrolled ? (
+              {isEnrolled ? ( 
                 <button
                   onClick={() => navigate('/dashboard')}
                   className="w-full btn-primary mb-4"

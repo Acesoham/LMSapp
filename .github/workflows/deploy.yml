@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2 via SSH
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -18,8 +18,10 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           ssh_options: "-o StrictHostKeyChecking=no"
           script: |
+            set -e
             cd ~/LMSapp
             git pull origin main
             docker-compose down
             docker-compose build --no-cache frontend
             docker-compose up -d
+

@@ -16,7 +16,7 @@ const Home = () => {
             <div className="space-y-8 animate-slide-up">
               <div className="inline-block">
                 <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
-                  🚀 Launch Your Learning Journey WITH THE GOAT
+                  🚀 Launch Your Learning Journey WITH THE GOAT asf
                 </span>
               </div>
               

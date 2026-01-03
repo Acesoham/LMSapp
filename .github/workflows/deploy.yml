@@ -19,7 +19,10 @@ jobs:
           script: |
             set -e
             cd ~/LMSapp
-            git pull origin main
+
+            git fetch origin
+            git reset --hard origin/main
+
             docker-compose down
             docker-compose build --no-cache frontend
             docker-compose up -d

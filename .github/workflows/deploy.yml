@@ -16,14 +16,14 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          script_stop: false
           script: |
-            cd ~/LMSapp
+            set -e
+            cd /home/ubuntu/LMSapp
 
             git fetch origin
             git reset --hard origin/main
 
-            sudo docker-compose down
-            sudo docker-compose build --no-cache frontend
-            sudo docker-compose up -d
+            sudo docker-compose -f docker-compose.yml down
+            sudo docker-compose -f docker-compose.yml build --no-cache frontend
+            sudo docker-compose -f docker-compose.yml up -d
 

@@ -314,7 +314,7 @@ const Admin = () => {
 
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              Price ($) *
+                              Price (₹) *
                             </label>
                             <input
                               type="number"
@@ -538,7 +538,7 @@ const Admin = () => {
                               <div className="text-sm text-slate-600">{course.difficulty}</div>
                             </td>
                             <td className="px-6 py-4 text-sm">{course.category}</td>
-                            <td className="px-6 py-4 text-sm font-semibold">${course.price}</td>
+                            <td className="px-6 py-4 text-sm font-semibold">₹599</td>
                             <td className="px-6 py-4 text-sm">{course.enrolledStudents}</td>
                             <td className="px-6 py-4">
                               <div className="flex space-x-2">

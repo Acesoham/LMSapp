@@ -224,7 +224,7 @@ const CourseDetail = () => {
             <div className="card p-8 sticky top-24 animate-scale-in">
               <div className="text-center mb-6">
                 <div className="text-4xl font-bold gradient-text mb-2">
-                  ${course.price}
+                  ₹599
                 </div>
                 <p className="text-slate-600">One-time payment</p>
               </div>

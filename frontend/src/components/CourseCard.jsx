@@ -30,7 +30,7 @@ const CourseCard = ({ course }) => {
         </div>
         <div className="absolute bottom-4 left-4">
           <span className="badge bg-white text-slate-800 font-bold">
-            ${course.price}
+            ₹599
           </span>
         </div>
       </div>

@@ -19,6 +19,8 @@ const Home = () => {
                   🚀 Launch Your Learning Journey With EduFlow
                 </span>
               </div>
+              <h1>CI CD LIVE 🚀</h1>
+
               
               <h1 className="text-5xl lg:text-7xl font-display font-bold leading-tight">
                 Learn Without

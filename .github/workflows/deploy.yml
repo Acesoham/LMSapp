@@ -18,12 +18,33 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           script: |
             set -e
-            cd /home/ubuntu/LMSapp
+            # Find the application directory (handling case-sensitivity)
+            if [ -d "/home/ubuntu/LMSapp" ]; then
+                cd /home/ubuntu/LMSapp
+            elif [ -d "/home/ubuntu/LMSAPP" ]; then
+                cd /home/ubuntu/LMSAPP
+            else
+                echo "Directory not found, searching..."
+                APP_DIR=$(find /home/ubuntu -maxdepth 2 -name "LMS*" -type d | head -n 1)
+                if [ -z "$APP_DIR" ]; then
+                    echo "Could not find LMS directory"
+                    exit 1
+                fi
+                cd "$APP_DIR"
+            fi
 
+            echo "Deploying in: $(pwd)"
             git fetch origin
             git reset --hard origin/main
 
+            # Determine docker compose command (v2 or v1)
+            if docker compose version >/dev/null 2>&1; then
+                DOCKER_COMPOSE="sudo docker compose"
+            else
+                DOCKER_COMPOSE="sudo docker-compose"
+            fi
+
             # Build and restart all services
-            sudo docker compose down
-            sudo docker compose up --build -d
+            $DOCKER_COMPOSE down
+            $DOCKER_COMPOSE up --build -d
 

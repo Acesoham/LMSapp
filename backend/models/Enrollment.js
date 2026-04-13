@@ -15,6 +15,12 @@ const enrollmentSchema = new mongoose.Schema({
     completedLessons: [{
       type: mongoose.Schema.Types.ObjectId,
     }],
+    completedAssignments: [{
+      assignment: { type: mongoose.Schema.Types.ObjectId },
+      linkUrl: { type: String, default: '' },
+      fileUrl: { type: String, default: '' },
+      submittedAt: { type: Date, default: Date.now }
+    }],
     percentage: {
       type: Number,
       default: 0,

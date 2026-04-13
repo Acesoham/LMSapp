@@ -13,9 +13,29 @@ const lessonSchema = new mongoose.Schema({
     type: String, // e.g., "45 mins"
     required: true,
   },
+  videoUrl: {
+    type: String,
+    required: false,
+    default: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+  },
   order: {
     type: Number,
     required: true,
+  },
+});
+
+const assignmentSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  points: {
+    type: Number,
+    default: 100,
   },
 });
 
@@ -77,6 +97,7 @@ const courseSchema = new mongoose.Schema({
     max: 5,
   },
   lessons: [lessonSchema],
+  assignments: [assignmentSchema],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

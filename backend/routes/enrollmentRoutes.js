@@ -6,6 +6,7 @@ const {
   getEnrollment,
   updateProgress,
   getAllEnrollments,
+  completeAssignment,
 } = require('../controllers/enrollmentController');
 const { protect, admin } = require('../middleware/auth');
 
@@ -19,5 +20,6 @@ router.route('/:courseId')
   .get(protect, getEnrollment);
 
 router.put('/:courseId/progress', protect, updateProgress);
+router.put('/:courseId/assignments/:assignmentId/complete', protect, completeAssignment);
 
 module.exports = router;

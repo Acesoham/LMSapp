@@ -136,10 +136,56 @@ const getAllEnrollments = async (req, res) => {
   }
 };
 
+// @desc    Update assignment progress
+// @route   PUT /api/enrollments/:courseId/assignments/:assignmentId
+// @access  Private
+  const completeAssignment = async (req, res) => {
+  try {
+    const { courseId, assignmentId } = req.params;
+    const { linkUrl, fileUrl } = req.body;
+
+    const enrollment = await Enrollment.findOne({
+      user: req.user._id,
+      course: courseId,
+    });
+
+    if (!enrollment) {
+      return res.status(404).json({ message: 'Enrollment not found' });
+    }
+
+    // Check if assignment already submitted
+    const existingSubmissionIndex = enrollment.progress.completedAssignments.findIndex(
+      (a) => a.assignment.toString() === assignmentId
+    );
+
+    if (existingSubmissionIndex > -1) {
+      // Update existing submission
+      enrollment.progress.completedAssignments[existingSubmissionIndex].linkUrl = linkUrl || '';
+      enrollment.progress.completedAssignments[existingSubmissionIndex].fileUrl = fileUrl || '';
+      enrollment.progress.completedAssignments[existingSubmissionIndex].submittedAt = Date.now();
+    } else {
+      // Create new submission
+      enrollment.progress.completedAssignments.push({
+        assignment: assignmentId,
+        linkUrl: linkUrl || '',
+        fileUrl: fileUrl || ''
+      });
+    }
+    
+    enrollment.lastAccessedAt = Date.now();
+    await enrollment.save();
+
+    res.json(enrollment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   enrollCourse,
   getMyEnrollments,
   getEnrollment,
   updateProgress,
   getAllEnrollments,
+  completeAssignment,
 };

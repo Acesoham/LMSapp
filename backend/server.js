@@ -8,6 +8,9 @@ const authRoutes = require('./routes/authRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
 const userRoutes = require('./routes/userRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+const path = require('path');
 
 // Connect to database
 connectDB();
@@ -24,6 +27,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Make uploads folder static
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
 // Root route
 app.get('/', (req, res) => {

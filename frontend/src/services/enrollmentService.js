@@ -25,4 +25,9 @@ export const enrollmentService = {
     const response = await api.get('/enrollments/admin/all');
     return response.data;
   },
+
+  completeAssignment: async (courseId, assignmentId, data) => {
+    const response = await api.put(`/enrollments/${courseId}/assignments/${assignmentId}/complete`, data);
+    return response.data;
+  },
 };

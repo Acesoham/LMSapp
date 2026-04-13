@@ -4,6 +4,8 @@ import { courseService } from '../services/courseService';
 import { enrollmentService } from '../services/enrollmentService';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../components/Loading';
+import PaymentModal from '../components/PaymentModal';
+import AIChatBot from '../components/AIChatBot';
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -16,6 +18,7 @@ const CourseDetail = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     fetchCourse();
@@ -46,12 +49,16 @@ const CourseDetail = () => {
     }
   };
 
-  const handleEnroll = async () => {
+  const openPaymentModal = () => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
+    setIsPaymentModalOpen(true);
+  };
 
+  const handleEnroll = async () => {
+    setIsPaymentModalOpen(false);
     setEnrolling(true);
     setError('');
     setSuccess('');
@@ -148,6 +155,27 @@ const CourseDetail = () => {
                 {course.description}
               </p>
 
+              {/* Free Intro Video Preview */}
+              {course.lessons && course.lessons.length > 0 && course.lessons[0].videoUrl && (
+                <div className="mb-8 rounded-2xl overflow-hidden shadow-lg border border-slate-100 bg-slate-900">
+                  <div className="bg-slate-800 text-white px-4 py-3 text-sm font-semibold flex items-center gap-2 border-b border-slate-700">
+                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Demo Available: {course.lessons[0].title}
+                  </div>
+                  <div className="relative pb-[56.25%] h-0">
+                    <iframe
+                      src={course.lessons[0].videoUrl}
+                      title="Free Intro Course Preview"
+                      className="absolute top-0 left-0 w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-6 text-slate-600">
                 <div className="flex items-center space-x-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +266,7 @@ const CourseDetail = () => {
                 </button>
               ) : (
                 <button
-                  onClick={handleEnroll}
+                  onClick={openPaymentModal}
                   disabled={enrolling}
                   className="w-full btn-primary mb-4 disabled:opacity-50"
                 >
@@ -268,6 +296,15 @@ const CourseDetail = () => {
           </div>
         </div>
       </div>
+
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onPaymentSuccess={handleEnroll}
+        courseTitle={course?.title}
+        amount={course?.price || 599}
+      />
+      <AIChatBot courseContext={course?.title || 'EduFlow Course'} />
     </div>
   );
 };

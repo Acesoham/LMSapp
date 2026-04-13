@@ -26,11 +26,6 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
-            # Forcefully free up ports if they are stuck
-            echo "Freeing up ports..."
-            sudo fuser -k 80/tcp || true
-            sudo fuser -k 5000/tcp || true
-
             # Cleanup old docker artifacts
             sudo docker system prune -f
 

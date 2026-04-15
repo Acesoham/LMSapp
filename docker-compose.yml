@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+
+  backend:
+    build: ./backend
+    container_name: lms_backend
+    ports:
+      - "5000:5000"
+    restart: always
+    environment:
+      - NODE_ENV=production
+
+  frontend:
+    build: ./frontend
+    container_name: lms_frontend
+    ports:
+      - "3000:3000"
+    restart: always
+    depends_on:
+      - backend

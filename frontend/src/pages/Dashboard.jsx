@@ -1,480 +1,435 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { enrollmentService } from '../services/enrollmentService';
 import { uploadService } from '../services/uploadService';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../components/Loading';
 import AIChatBot from '../components/AIChatBot';
 
-const Dashboard = () => {
-  const { user } = useAuth();
+/* ── Sidebar nav items ── */
+const NAV = [
+  { label: 'Curriculum',  id: 'curriculum',  icon: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25' },
+  { label: 'Scholarship', id: 'scholarship', icon: 'M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5' },
+  { label: 'Library',     id: 'library',     icon: 'M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25' },
+  { label: 'Research',    id: 'research',    icon: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5' },
+  { label: 'Faculty',     id: 'faculty',     icon: 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z' },
+];
+
+const DEADLINES = [
+  { urgency: 'IN 2 DAYS', title: 'Synthesis Paper: Digital Hermeneutics', course: 'Foundations of Modern Media Course', actions: ['View Rubric', 'Submit Draft'], accent: '#ef4444' },
+  { urgency: 'IN 3 DAYS', title: 'Peer Review: Ethical Bio-Engineering', course: 'Research Ethics Lab', actions: ['Assign Peers'], accent: '#f59e0b' },
+  { urgency: 'NEXT WEEK', title: 'Final Portfolio Submission', course: 'Master of Scholarly Curation', actions: ['Manage Deliverables'], accent: '#3f51b5' },
+];
+
+export default function Dashboard() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [enrollments, setEnrollments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loading, setLoading]         = useState(true);
+  const [activeNav, setActiveNav]     = useState('curriculum');
   const [expandedCourse, setExpandedCourse] = useState(null);
-  const [activeTab, setActiveTab] = useState('lessons');
+  const [activeTab, setActiveTab]     = useState('lessons');
   const [activeVideo, setActiveVideo] = useState(null);
-  
-  // Assignment Submission States
   const [submittingAssignment, setSubmittingAssignment] = useState(null);
   const [assignmentLink, setAssignmentLink] = useState('');
   const [assignmentFile, setAssignmentFile] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading]       = useState(false);
 
-  useEffect(() => {
-    fetchEnrollments();
-  }, []);
+  useEffect(() => { fetchEnrollments(); }, []);
 
   const fetchEnrollments = async () => {
     try {
       setLoading(true);
       const data = await enrollmentService.getMyEnrollments();
       setEnrollments(data);
-    } catch (err) {
-      setError('Failed to load enrollments');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally  { setLoading(false); }
   };
 
   const handleLessonComplete = async (courseId, lessonId) => {
-    try {
-      await enrollmentService.updateProgress(courseId, lessonId);
-      // Refresh enrollments
-      fetchEnrollments();
-    } catch (err) {
-      console.error('Failed to update progress:', err);
-    }
+    try { await enrollmentService.updateProgress(courseId, lessonId); fetchEnrollments(); }
+    catch (e) { console.error(e); }
   };
 
-  const toggleCourseExpansion = (courseId) => {
-    setExpandedCourse(expandedCourse === courseId ? null : courseId);
-    setActiveTab('lessons');
-    setSubmittingAssignment(null);
-  };
-
-  const handleAssignmentSubmitClick = (assignmentId) => {
-    setSubmittingAssignment(submittingAssignment === assignmentId ? null : assignmentId);
-    setAssignmentLink('');
-    setAssignmentFile(null);
-  };
-
-  const confirmAssignmentComplete = async (courseId, assignmentId) => {
+  const confirmAssignment = async (courseId, assignmentId) => {
     try {
       setIsUploading(true);
       let fileUrl = '';
-      
       if (assignmentFile) {
-        const uploadData = await uploadService.uploadFile(assignmentFile);
-        fileUrl = uploadData.url;
+        const up = await uploadService.uploadFile(assignmentFile);
+        fileUrl = up.url;
       }
-      
-      await enrollmentService.completeAssignment(courseId, assignmentId, {
-        linkUrl: assignmentLink,
-        fileUrl: fileUrl
-      });
-      
-      setSubmittingAssignment(null);
-      setAssignmentLink('');
-      setAssignmentFile(null);
+      await enrollmentService.completeAssignment(courseId, assignmentId, { linkUrl: assignmentLink, fileUrl });
+      setSubmittingAssignment(null); setAssignmentLink(''); setAssignmentFile(null);
       fetchEnrollments();
-    } catch (err) {
-      console.error('Failed to complete assignment:', err);
-    } finally {
-      setIsUploading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setIsUploading(false); }
   };
 
-  if (loading) {
-    return <Loading message="Loading your dashboard..." />;
-  }
+  const avgProgress = enrollments.length
+    ? Math.round(enrollments.reduce((a, e) => a + e.progress.percentage, 0) / enrollments.length)
+    : 0;
+
+  const totalLessons = enrollments.reduce((a, e) => a + e.progress.completedLessons.length, 0);
+  const focusHours   = Number((totalLessons * 0.75).toFixed(1));
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-12 animate-slide-up">
-          <h1 className="text-4xl lg:text-5xl font-display font-bold mb-2">
-            Welcome back, <span className="gradient-text">{user?.name}</span>
-          </h1>
-          <p className="text-xl text-slate-600">
-            Continue your learning journey
-          </p>
-        </div>
+    <div className="flex min-h-screen" style={{ background: '#f8f8fc', fontFamily: 'Inter, sans-serif' }}>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="card p-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-semibold mb-1">Enrolled Courses</p>
-                <p className="text-3xl font-bold gradient-text">{enrollments.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
+      {/* ══ LEFT SIDEBAR ══════════════════════════════════ */}
+      <aside className="w-64 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col min-h-screen sticky top-0 h-screen overflow-y-auto">
+        {/* Brand */}
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #3f51b5, #009688)' }}>
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+              </svg>
             </div>
-          </div>
-
-          <div className="card p-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-semibold mb-1">Average Progress</p>
-                <p className="text-3xl font-bold gradient-text">
-                  {enrollments.length > 0
-                    ? Math.round(
-                        enrollments.reduce((acc, e) => acc + e.progress.percentage, 0) /
-                          enrollments.length
-                      )
-                    : 0}%
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="card p-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-semibold mb-1">Completed Courses</p>
-                <p className="text-3xl font-bold gradient-text">
-                  {enrollments.filter((e) => e.progress.percentage === 100).length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
-              </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900" style={{ fontFamily: 'Manrope, sans-serif' }}>The Emerald Archive</p>
+              <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">Academic Editorial</p>
             </div>
           </div>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-xl">
-            <p className="text-red-700">{error}</p>
+        {/* Nav */}
+        <nav className="flex-1 p-4 space-y-1">
+          {NAV.map((item) => {
+            const active = activeNav === item.id;
+            return (
+              <button key={item.id} id={`nav-${item.id}`}
+                onClick={() => setActiveNav(item.id)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left"
+                style={{
+                  background: active ? 'rgba(63,81,181,0.08)' : 'transparent',
+                  color: active ? '#3f51b5' : '#6b7280',
+                }}>
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon}/>
+                </svg>
+                {item.label}
+                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500"/>}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Bottom */}
+        <div className="p-4 space-y-1 border-t border-gray-100">
+          {[
+            { label: 'Settings', icon: 'M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+            { label: 'Support',  icon: 'M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z' },
+          ].map((item) => (
+            <button key={item.label}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all text-left">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon}/>
+              </svg>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      {/* ══ MAIN CONTENT ══════════════════════════════════ */}
+      <main className="flex-1 overflow-y-auto">
+
+        {/* Top bar */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-bold text-gray-900" style={{ fontFamily: 'Manrope, sans-serif' }}>EduFlow Emerald</span>
+            <span className="text-gray-300 mx-1">·</span>
+            {['Curriculum','Scholarship','Library'].map((n) => (
+              <button key={n} className="text-sm text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">{n}</button>
+            ))}
           </div>
-        )}
+          <div className="flex items-center gap-3">
+            <button className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
+              </svg>
+            </button>
+            <button className="p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/>
+              </svg>
+            </button>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, #3f51b5, #009688)' }}>
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+          </div>
+        </div>
 
-        {/* Enrolled Courses */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-6">My Courses</h2>
-          
-          {enrollments.length > 0 ? (
-            <div className="space-y-6">
-              {enrollments.map((enrollment) => (
-                <div key={enrollment._id} className="card overflow-hidden animate-fade-in">
-                  <div className="p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                      {/* Course Image */}
-                      <img
-                        src={enrollment.course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400'}
-                        alt={enrollment.course.title}
-                        className="w-full lg:w-48 h-32 object-cover rounded-xl"
-                      />
-                      
-                      {/* Course Info */}
-                      <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-                          <div>
-                            <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
-                              {enrollment.course.category}
-                            </span>
-                            <h3 className="text-xl font-bold mt-2">{enrollment.course.title}</h3>
-                          </div>
-                          <button
-                            onClick={() => toggleCourseExpansion(enrollment.course._id)}
-                            className="btn-secondary text-sm px-4 py-2"
-                          >
-                            {expandedCourse === enrollment.course._id ? 'Hide Lessons' : 'View Lessons'}
-                          </button>
-                        </div>
+        {loading ? (
+          <div className="p-8"><Loading message="Loading your archive…"/></div>
+        ) : (
+          <div className="p-8 max-w-5xl">
 
-                        {/* Progress Bar */}
-                        <div className="mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold text-slate-600">Progress</span>
-                            <span className="text-sm font-bold text-blue-600">
-                              {enrollment.progress.percentage}%
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                            <div
-                              className="bg-gradient-to-r from-blue-600 to-indigo-600 h-full rounded-full transition-all duration-500"
-                              style={{ width: `${enrollment.progress.percentage}%` }}
-                            ></div>
-                          </div>
-                        </div>
+            {/* Welcome */}
+            <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Welcome back, Curator</p>
+            <h1 className="text-4xl font-bold mb-2 leading-tight"
+              style={{ fontFamily: 'Manrope, sans-serif', color: '#3f51b5', letterSpacing: '-0.02em' }}>
+              Curate Your Learning Journey
+            </h1>
+            <p className="text-gray-500 text-sm mb-10 max-w-lg">
+              Review your academic progress, synthesize your latest findings, and chart the course for your next scholarly endeavor.
+            </p>
 
-                        <div className="flex items-center justify-between text-sm text-slate-600">
-                          <span>
-                            {enrollment.progress.completedLessons.length} of {enrollment.course.lessons.length} lessons completed
-                          </span>
-                          <span>
-                            Last accessed: {new Date(enrollment.lastAccessedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tabs / Lessons List (Expandable) */}
-                    {expandedCourse === enrollment.course._id && (
-                      <div className="mt-6 pt-6 border-t border-slate-200">
-                        {/* Tab Headers */}
-                        <div className="flex space-x-6 border-b border-slate-200 mb-6 px-2">
-                          <button
-                            onClick={() => setActiveTab('lessons')}
-                            className={`pb-3 font-semibold text-sm transition-colors relative ${activeTab === 'lessons' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
-                          >
-                            Lessons ({enrollment.course.lessons?.length || 0})
-                            {activeTab === 'lessons' && <div className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-blue-600 rounded-t-full"></div>}
-                          </button>
-                          
-                          {enrollment.course.assignments && enrollment.course.assignments.length > 0 && (
-                            <button
-                              onClick={() => setActiveTab('assignments')}
-                              className={`pb-3 font-semibold text-sm transition-colors relative ${activeTab === 'assignments' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
-                            >
-                              Assignments ({enrollment.course.assignments.length})
-                              {activeTab === 'assignments' && <div className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-blue-600 rounded-t-full"></div>}
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Tab Content: Lessons */}
-                        {activeTab === 'lessons' && (
-                          <div className="space-y-3">
-                            {enrollment.course.lessons.map((lesson) => {
-                              const isCompleted = enrollment.progress.completedLessons.includes(lesson._id);
-                              
-                              return (
-                                <div key={lesson._id} className="flex flex-col space-y-2">
-                                  <div
-                                    className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer border border-transparent hover:border-slate-200"
-                                    onClick={() => setActiveVideo(activeVideo === lesson._id ? null : lesson._id)}
-                                  >
-                                    <div className="flex items-center space-x-3 flex-1">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleLessonComplete(enrollment.course._id, lesson._id);
-                                        }}
-                                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                                          isCompleted
-                                            ? 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-white'
-                                            : 'bg-slate-200 hover:bg-slate-300 text-slate-400 hover:text-slate-600 border-2 border-white'
-                                        }`}
-                                      >
-                                        {isCompleted ? (
-                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                          </svg>
-                                        ) : (
-                                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                          </svg>
-                                        )}
-                                      </button>
-                                      <div>
-                                        <p className={`font-semibold ${isCompleted ? 'text-slate-500' : 'text-slate-800'}`}>{lesson.title}</p>
-                                        <p className="text-sm text-slate-500">{lesson.duration}</p>
-                                      </div>
-                                    </div>
-                                    <div className="text-blue-600 font-medium text-sm flex items-center gap-1">
-                                      {activeVideo === lesson._id ? 'Close Video' : 'Watch Video'}
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Video Player */}
-                                  {activeVideo === lesson._id && (
-                                    <div className="p-4 bg-slate-900 rounded-xl overflow-hidden mt-2 animate-slide-up shadow-xl border border-slate-800">
-                                      <div className="relative pb-[56.25%] h-0 rounded-lg overflow-hidden border border-slate-700">
-                                        <iframe
-                                          src={lesson.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ'}
-                                          title={lesson.title}
-                                          className="absolute top-0 left-0 w-full h-full"
-                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                          allowFullScreen
-                                        ></iframe>
-                                      </div>
-                                      <div className="mt-4 flex justify-between items-center text-white">
-                                        <h4 className="font-semibold px-2">{lesson.title}</h4>
-                                        {!isCompleted && (
-                                          <button 
-                                            onClick={() => handleLessonComplete(enrollment.course._id, lesson._id)}
-                                            className="bg-green-500 hover:bg-green-400 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-lg"
-                                          >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Mark Complete
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Tab Content: Assignments */}
-                        {activeTab === 'assignments' && enrollment.course.assignments && (
-                          <div className="space-y-4 animate-fade-in">
-                             {enrollment.course.assignments.map((assignment) => {
-                               // Check if it's completed by looking for matching ID in completedAssignments array (which now contains objects)
-                               const completedObj = enrollment.progress.completedAssignments?.find(
-                                 (a) => a.assignment === assignment._id || (a.assignment && a.assignment._id === assignment._id)
-                               ) || enrollment.progress.completedAssignments?.find((a) => typeof a === 'string' && a === assignment._id);
-                               
-                               const isCompleted = !!completedObj;
-                               const isSubmitting = submittingAssignment === assignment._id;
-                               
-                               return (
-                                  <div key={assignment._id} className={`p-6 rounded-xl border-2 transition-all ${isCompleted ? 'bg-green-50/50 border-green-200' : 'bg-white border-blue-100 hover:border-blue-300 hover:shadow-md'}`}>
-                                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                        <div className="space-y-2 flex-1">
-                                          <div className="flex items-center gap-2">
-                                            {isCompleted ? (
-                                              <span className="badge bg-green-100 text-green-700 font-bold px-2 py-1 flex items-center gap-1">
-                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
-                                                Completed
-                                              </span>
-                                            ) : (
-                                              <span className="badge bg-blue-100 text-blue-700 font-bold px-2 py-1">Pending</span>
-                                            )}
-                                            <span className="text-sm font-bold text-slate-500">{assignment.points} Points</span>
-                                          </div>
-                                          <h4 className={`text-xl font-bold ${isCompleted ? 'text-slate-700' : 'text-slate-900'}`}>{assignment.title}</h4>
-                                          <p className="text-slate-600 mb-4">{assignment.description}</p>
-                                          
-                                          {isCompleted && completedObj && (completedObj.linkUrl || completedObj.fileUrl) && (
-                                            <div className="mt-4 p-4 bg-white/60 rounded-lg border border-green-100">
-                                              <p className="text-sm font-semibold text-slate-700 mb-2">Your Submission:</p>
-                                              {completedObj.fileUrl && (
-                                                <a href={completedObj.fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 mb-1">
-                                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                                  View Submitted File
-                                                </a>
-                                              )}
-                                              {completedObj.linkUrl && (
-                                                <a href={completedObj.linkUrl.startsWith('http') ? completedObj.linkUrl : `https://${completedObj.linkUrl}`} target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-800 text-sm flex items-center gap-1">
-                                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                                                  {completedObj.linkUrl}
-                                                </a>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                        
-                                        <div className="flex-shrink-0">
-                                          {!isCompleted ? (
-                                            <button 
-                                              onClick={() => handleAssignmentSubmitClick(assignment._id)}
-                                              className={`w-full md:w-auto px-6 py-3 rounded-xl font-bold transition-transform ${isSubmitting ? 'bg-slate-200 text-slate-800' : 'btn-primary bg-blue-600 hover:bg-blue-700 hover:scale-[1.02]'}`}
-                                            >
-                                              {isSubmitting ? 'Cancel' : 'Submit Assignment'}
-                                            </button>
-                                          ) : (
-                                            <div className="w-full md:w-auto px-6 py-3 rounded-lg bg-green-100 text-green-800 font-bold border border-green-200 text-center flex justify-center items-center gap-2">
-                                              Score: {assignment.points}/{assignment.points}
-                                            </div>
-                                          )}
-                                        </div>
-                                     </div>
-                                     
-                                     {/* Submission Form Dropdown */}
-                                     {isSubmitting && (
-                                        <div className="mt-6 pt-6 border-t border-slate-200 animate-slide-up">
-                                          <h5 className="font-bold text-slate-800 mb-4">Submit your work</h5>
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div>
-                                              <label className="block text-sm font-semibold text-slate-700 mb-2">Upload File (PDF, ZIP, Image)</label>
-                                              <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 hover:border-blue-500 transition-colors bg-slate-50 cursor-pointer relative">
-                                                <input 
-                                                  type="file" 
-                                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                                  onChange={(e) => setAssignmentFile(e.target.files[0])}
-                                                />
-                                                <div className="text-center">
-                                                  <svg className="w-8 h-8 text-slate-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                                                  <span className="text-sm text-slate-600 font-medium">
-                                                    {assignmentFile ? assignmentFile.name : 'Click or drop file here'}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                            </div>
-                                            <div>
-                                              <label className="block text-sm font-semibold text-slate-700 mb-2">External Link (GitHub, Drive, etc) </label>
-                                              <input 
-                                                type="url" 
-                                                placeholder="https://..."
-                                                className="input-field mb-2 bg-slate-50"
-                                                value={assignmentLink}
-                                                onChange={(e) => setAssignmentLink(e.target.value)}
-                                              />
-                                              <p className="text-xs text-slate-500">Provide a link to your hosted project or repository if applicable.</p>
-                                            </div>
-                                          </div>
-                                          
-                                          <div className="mt-6 flex justify-end">
-                                            <button 
-                                              onClick={() => confirmAssignmentComplete(enrollment.course._id, assignment._id)}
-                                              disabled={isUploading || (!assignmentFile && !assignmentLink)}
-                                              className="btn-primary flex items-center gap-2 disabled:opacity-50"
-                                            >
-                                              {isUploading ? (
-                                                <>
-                                                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                                  Uploading...
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                  Confirm Submission
-                                                </>
-                                              )}
-                                            </button>
-                                          </div>
-                                        </div>
-                                     )}
-                                  </div>
-                               );
-                             })}
-                          </div>
-                        )}
-                      </div>
-                    )}
+            {/* Academic Velocity + stats */}
+            <div className="grid lg:grid-cols-3 gap-5 mb-10">
+              {/* Progress card */}
+              <div className="lg:col-span-2 bg-white rounded-2xl p-7 border border-gray-100">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Manrope, sans-serif' }}>Academic Velocity</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Quarterly Synthesis Goal</p>
+                  </div>
+                  <span className="text-3xl font-bold" style={{ color: '#3f51b5', fontFamily: 'Manrope, sans-serif' }}>{avgProgress}%</span>
+                </div>
+                {/* Progress bar */}
+                <div className="relative mb-3">
+                  <div className="h-3 rounded-full overflow-hidden" style={{ background: '#e8e8f0' }}>
+                    <div className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${avgProgress}%`, background: 'linear-gradient(90deg, #009688, #3f51b5)' }}/>
                   </div>
                 </div>
-              ))}
+                <div className="flex justify-between text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                  <span>Foundation Phase</span>
+                  <span>Synthesis Phase</span>
+                  <span>Mastery</span>
+                </div>
+              </div>
+
+              {/* Stat cards */}
+              <div className="flex flex-col gap-4">
+                <div className="rounded-2xl p-5 flex-1 flex flex-col justify-between"
+                  style={{ background: 'linear-gradient(135deg, #3f51b5, #5c6bc0)' }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-4 h-4 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+                    </svg>
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-indigo-200">Insights Generated</span>
+                  </div>
+                  <p className="text-4xl font-bold text-white" style={{ fontFamily: 'Manrope, sans-serif' }}>{totalLessons}</p>
+                </div>
+                <div className="rounded-2xl p-5 flex-1 bg-white border border-gray-100 flex flex-col justify-between">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">Focus Hours</span>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900" style={{ fontFamily: 'Manrope, sans-serif' }}>{focusHours}h</p>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="card p-12 text-center">
-              <div className="text-6xl mb-4">📚</div>
-              <h3 className="text-2xl font-bold text-slate-800 mb-2">No Courses Yet</h3>
-              <p className="text-slate-600 mb-6">
-                Start your learning journey by enrolling in a course
-              </p>
-              <Link to="/courses" className="btn-primary inline-block">
-                Browse Courses
-              </Link>
+
+            {/* Currently Curating */}
+            <div className="mb-10">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'Manrope, sans-serif' }}>Currently Curating</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Active modules and research tracks</p>
+                </div>
+                <Link to="/courses" className="text-sm font-semibold flex items-center gap-1.5" style={{ color: '#3f51b5' }}>
+                  View Entire Library
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+                  </svg>
+                </Link>
+              </div>
+
+              {enrollments.length > 0 ? (
+                <div className="grid md:grid-cols-2 gap-5">
+                  {enrollments.map((enrollment) => {
+                    const course = enrollment.course;
+                    const isExpanded = expandedCourse === course._id;
+                    return (
+                      <div key={enrollment._id} className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-md transition-all duration-300">
+                        {/* Course image */}
+                        <div className="relative" style={{ height: '160px' }}>
+                          <img src={course.thumbnail || 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600'} alt={course.title}
+                            className="w-full h-full object-cover"/>
+                          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 60%)' }}/>
+                          <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest text-white"
+                            style={{ background: 'rgba(63,81,181,0.8)', backdropFilter: 'blur(4px)' }}>
+                            {course.category?.toUpperCase() || 'RESEARCH TRACK'}
+                          </span>
+                          <span className="absolute top-3 right-3 text-[10px] font-bold text-white/70">
+                            {enrollment.progress.completedLessons.length}/{course.lessons?.length || 0} Units
+                          </span>
+                        </div>
+
+                        <div className="p-5">
+                          <h3 className="font-bold text-base mb-1.5 leading-snug" style={{ fontFamily: 'Manrope, sans-serif', color: '#3f51b5' }}>
+                            {course.title}
+                          </h3>
+                          <p className="text-xs text-gray-500 mb-4 line-clamp-2">{course.description}</p>
+
+                          {/* Avatars + Continue */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex -space-x-2">
+                              {[11,12,5].map(n => (
+                                <img key={n} src={`https://i.pravatar.cc/28?img=${n}`} className="w-7 h-7 rounded-full border-2 border-white"/>
+                              ))}
+                              <div className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold bg-gray-100 text-gray-500">+5</div>
+                            </div>
+                            <button id={`continue-${course._id}`}
+                              onClick={() => setExpandedCourse(isExpanded ? null : course._id)}
+                              className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+                              style={{ background: '#3f51b5' }}>
+                              Continue
+                            </button>
+                          </div>
+
+                          {/* Expanded lessons */}
+                          {isExpanded && (
+                            <div className="mt-5 pt-5 border-t border-gray-100 space-y-2 animate-fade-in">
+                              <div className="flex gap-4 mb-4">
+                                {['lessons','assignments'].map(t => (
+                                  <button key={t} onClick={() => setActiveTab(t)}
+                                    className={`text-xs font-bold pb-1.5 capitalize transition-colors ${activeTab === t ? 'text-indigo-600 border-b-2 border-indigo-500' : 'text-gray-400'}`}>
+                                    {t}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {activeTab === 'lessons' && course.lessons?.map((lesson, idx) => {
+                                const done = enrollment.progress.completedLessons.includes(lesson._id);
+                                const videoOpen = activeVideo === lesson._id;
+                                return (
+                                  <div key={lesson._id}>
+                                    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
+                                      onClick={() => setActiveVideo(videoOpen ? null : lesson._id)}>
+                                      <button id={`mark-${lesson._id}`}
+                                        onClick={e => { e.stopPropagation(); handleLessonComplete(course._id, lesson._id); }}
+                                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
+                                        style={{ background: done ? '#009688' : '#e8e8f0' }}>
+                                        {done && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>}
+                                      </button>
+                                      <span className="flex-1 text-xs font-medium" style={{ color: done ? '#9ca3af' : '#374151', textDecoration: done ? 'line-through' : 'none' }}>
+                                        {String(idx + 1).padStart(2,'0')}. {lesson.title}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400 font-mono">{lesson.duration}</span>
+                                    </div>
+                                    {videoOpen && (
+                                      <div className="mx-3 mb-2 rounded-xl overflow-hidden bg-gray-900">
+                                        <div className="relative" style={{ paddingBottom: '56.25%' }}>
+                                          <iframe src={lesson.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ'}
+                                            className="absolute inset-0 w-full h-full" allowFullScreen title={lesson.title}/>
+                                        </div>
+                                        {!done && (
+                                          <div className="flex justify-end p-3">
+                                            <button onClick={() => handleLessonComplete(course._id, lesson._id)}
+                                              className="text-xs font-bold px-4 py-2 rounded-lg text-white" style={{ background: '#009688' }}>
+                                              ✓ Mark Complete
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+
+                              {activeTab === 'assignments' && (course.assignments?.length > 0 ? course.assignments.map((a) => {
+                                const completed = enrollment.progress.completedAssignments?.some(ca =>
+                                  (ca.assignment || ca) === a._id || ca.assignment?.toString() === a._id
+                                );
+                                const submitting = submittingAssignment === a._id;
+                                return (
+                                  <div key={a._id} className="p-3 rounded-xl border border-gray-100">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div>
+                                        <p className="text-xs font-bold text-gray-800">{a.title}</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">{a.points} pts</p>
+                                      </div>
+                                      {!completed ? (
+                                        <button onClick={() => setSubmittingAssignment(submitting ? null : a._id)}
+                                          className="text-xs font-bold px-3 py-1.5 rounded-lg text-white flex-shrink-0" style={{ background: '#3f51b5' }}>
+                                          {submitting ? 'Cancel' : 'Submit'}
+                                        </button>
+                                      ) : (
+                                        <span className="text-xs font-bold text-green-600 px-3 py-1.5 rounded-lg bg-green-50">Done</span>
+                                      )}
+                                    </div>
+                                    {submitting && (
+                                      <div className="mt-3 space-y-2">
+                                        <input type="url" placeholder="https://your-link.com" className="w-full text-xs p-2 rounded-lg border border-gray-200 outline-none"
+                                          value={assignmentLink} onChange={e => setAssignmentLink(e.target.value)}/>
+                                        <input type="file" className="text-xs w-full" onChange={e => setAssignmentFile(e.target.files[0])}/>
+                                        <button onClick={() => confirmAssignment(course._id, a._id)} disabled={isUploading || (!assignmentFile && !assignmentLink)}
+                                          className="w-full text-xs font-bold py-2 rounded-lg text-white disabled:opacity-50" style={{ background: '#009688' }}>
+                                          {isUploading ? 'Uploading…' : 'Confirm Submission'}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }) : <p className="text-xs text-gray-400 py-2">No assignments for this course.</p>)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl p-12 border border-gray-100 text-center">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#f0f1ff' }}>
+                    <svg className="w-8 h-8" style={{ color: '#3f51b5' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>No Active Modules</h3>
+                  <p className="text-sm text-gray-400 mb-6">Enroll in a course to begin your scholarly journey.</p>
+                  <Link to="/courses" className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#3f51b5' }}>
+                    Browse Library
+                  </Link>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-      <AIChatBot courseContext={expandedCourse ? enrollments.find(e => e.course._id === expandedCourse)?.course.title : 'My Student Dashboard'} />
+
+            {/* Upcoming Deadlines */}
+            <div className="bg-white rounded-2xl p-7 border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-5" style={{ fontFamily: 'Manrope, sans-serif' }}>Upcoming Deadlines</h2>
+              <div className="space-y-0">
+                {DEADLINES.map((d, i) => (
+                  <div key={i} className={`flex items-start gap-5 py-5 ${i < DEADLINES.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <div className="flex flex-col items-center gap-1 flex-shrink-0 w-16">
+                      <div className="w-2.5 h-2.5 rounded-full mt-1.5" style={{ background: d.accent }}/>
+                      <div className="w-px flex-1 bg-gray-100" style={{ minHeight: '40px' }}/>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold tracking-widest uppercase mb-1" style={{ color: d.accent }}>{d.urgency}</p>
+                      <p className="font-bold text-sm text-gray-900 mb-0.5" style={{ fontFamily: 'Manrope, sans-serif', color: '#3f51b5' }}>{d.title}</p>
+                      <p className="text-xs text-gray-400">{d.course}</p>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      {d.actions.map((action) => (
+                        <button key={action}
+                          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                          style={{
+                            background: action === d.actions[d.actions.length - 1] ? '#3f51b5' : 'white',
+                            color: action === d.actions[d.actions.length - 1] ? 'white' : '#374151',
+                            border: action === d.actions[d.actions.length - 1] ? 'none' : '1.5px solid #e5e7eb',
+                          }}>
+                          {action}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <AIChatBot courseContext="My Learning Dashboard"/>
     </div>
   );
-};
-
-export default Dashboard;
+}

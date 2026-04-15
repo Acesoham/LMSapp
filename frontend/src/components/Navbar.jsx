@@ -1,188 +1,124 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    setIsMenuOpen(false);
-  };
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const handleLogout = () => { logout(); navigate('/'); setIsMenuOpen(false); };
+  const isActive = (path) => location.pathname === path;
+
+  const navLinks = [
+    { to: '/courses', label: 'Courses' },
+    { to: '/#features', label: 'Features' },
+    { to: '/#enterprise', label: 'Enterprise' },
+    { to: '/#pricing', label: 'Pricing' },
+    ...(isAuthenticated ? [{ to: '/dashboard', label: 'Dashboard' }] : []),
+    ...(isAuthenticated && isAdmin ? [{ to: '/admin', label: 'Admin' }] : []),
+  ];
 
   return (
-    <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+    <nav className={`sticky top-0 z-50 bg-white transition-all duration-300 ${scrolled ? 'shadow-sm border-b border-gray-100' : ''}`}>
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
-              <span className="text-white font-bold text-xl">E</span>
+          <Link to="/" id="nav-logo" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #1a1a2e, #3f51b5)' }}>
+              <span className="text-white font-bold text-xs">E</span>
             </div>
-            <span className="text-2xl font-display font-bold gradient-text hidden sm:block">
-              EduFlow
-            </span>
+            <span className="font-bold text-gray-900 text-base tracking-tight">EduFlow</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/courses"
-              className="text-slate-700 hover:text-blue-600 font-semibold transition-colors duration-300"
-            >
-              Courses
-            </Link>
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link key={link.to} to={link.to}
+                id={`nav-${link.label.toLowerCase()}`}
+                className={`text-sm font-medium transition-colors duration-200 ${
+                  isActive(link.to) ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}>
+                {link.label}
+              </Link>
+            ))}
+          </div>
 
+          {/* Auth buttons */}
+          <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/dashboard"
-                  className="text-slate-700 hover:text-blue-600 font-semibold transition-colors duration-300"
-                >
-                  Dashboard
-                </Link>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="text-slate-700 hover:text-blue-600 font-semibold transition-colors duration-300"
-                  >
-                    Admin
-                  </Link>
-                )}
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold text-sm">
-                        {user?.name?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <span className="text-sm font-semibold text-slate-700">
-                      {user?.name}
-                    </span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                    style={{ background: '#3f51b5' }}>
+                    {user?.name?.charAt(0).toUpperCase()}
                   </div>
-                  <button
-                    onClick={handleLogout}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-semibold transition-all duration-300"
-                  >
-                    Logout
-                  </button>
+                  <span className="text-sm font-medium text-gray-700">{user?.name}</span>
                 </div>
+                <button id="nav-logout" onClick={handleLogout}
+                  className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                  Sign In
+                </button>
               </>
             ) : (
-              <div className="flex items-center space-x-4">
-                <Link
-                  to="/login"
-                  className="text-slate-700 hover:text-blue-600 font-semibold transition-colors duration-300"
-                >
-                  Login
+              <>
+                <Link id="nav-login" to="/login"
+                  className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                  Sign In
                 </Link>
-                <Link
-                  to="/register"
-                  className="btn-primary"
-                >
-                  Sign Up
+                <Link id="nav-signup" to="/register"
+                  className="text-sm font-semibold text-white px-4 py-2 rounded-lg transition-all hover:opacity-90"
+                  style={{ background: '#1a1a2e' }}>
+                  Get Started
                 </Link>
-              </div>
+              </>
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={toggleMenu}
-            className="md:hidden p-2 rounded-xl hover:bg-slate-100 transition-colors"
-            aria-label="Toggle menu"
-          >
-            <svg
-              className="w-6 h-6 text-slate-700"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              {isMenuOpen ? (
-                <path d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path d="M4 6h16M4 12h16M4 18h16" />
-              )}
+          {/* Mobile burger */}
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-50" aria-label="Toggle menu">
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              {isMenuOpen
+                ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />}
             </svg>
           </button>
         </div>
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 space-y-4 border-t border-slate-200 animate-fade-in">
-            <Link
-              to="/courses"
-              onClick={() => setIsMenuOpen(false)}
-              className="block px-4 py-2 text-slate-700 hover:bg-slate-50 rounded-xl font-semibold transition-colors"
-            >
-              Courses
-            </Link>
-
-            {isAuthenticated ? (
-              <>
-                <Link
-                  to="/dashboard"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-2 text-slate-700 hover:bg-slate-50 rounded-xl font-semibold transition-colors"
-                >
-                  Dashboard
-                </Link>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block px-4 py-2 text-slate-700 hover:bg-slate-50 rounded-xl font-semibold transition-colors"
-                  >
-                    Admin
-                  </Link>
-                )}
-                <div className="px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold text-sm">
-                        {user?.name?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <span className="text-sm font-semibold text-slate-700">
-                      {user?.name}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-2 text-slate-700 hover:bg-slate-50 rounded-xl font-semibold transition-colors"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-center"
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
+          <div className="md:hidden pb-4 pt-2 space-y-1 border-t border-gray-100">
+            {navLinks.map((link) => (
+              <Link key={link.to} to={link.to} onClick={() => setIsMenuOpen(false)}
+                className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                {link.label}
+              </Link>
+            ))}
+            <div className="pt-2 space-y-2 px-1">
+              {!isAuthenticated ? (
+                <>
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)}
+                    className="block px-4 py-2.5 text-sm font-medium text-gray-600">Sign In</Link>
+                  <Link to="/register" onClick={() => setIsMenuOpen(false)}
+                    className="block text-center text-sm font-semibold text-white px-4 py-2.5 rounded-lg"
+                    style={{ background: '#1a1a2e' }}>Get Started</Link>
+                </>
+              ) : (
+                <button onClick={handleLogout}
+                  className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-600">Logout</button>
+              )}
+            </div>
           </div>
         )}
       </div>
